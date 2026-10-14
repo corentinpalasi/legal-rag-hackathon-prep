@@ -1,3 +1,6 @@
+import json
+import numpy as np
+from openai import OpenAI
 from pypdf import PdfReader
 
 reader = PdfReader("data/code_penal.pdf")
@@ -24,4 +27,19 @@ for start in range(0, len(full_text), size - overlap):
     chunks.append(piece)                       # add the piece to the list
 
 print(len(chunks))
-print(chunks[500])
+#print(chunks[500])
+
+
+client = OpenAI(base_url="http://localhost:11434/v1", api_key="ollama")
+
+vectors = []
+for i in range(0, len(chunks), 50):                 # 50 chunks at a time
+    batch = chunks[i : i + 50]
+    #emb = client.embeddings.create(model="nomic-embed-text", input=batch) => worst version
+    emb = client.embeddings.create(model="bge-m3", input=batch)
+    vectors = vectors + [item.embedding for item in emb.data]
+    print(i, "/", len(chunks))                      # progress
+
+np.save("data/vectors.npy", np.array(vectors))      # the coordinates
+with open("data/chunks.json", "w") as f:
+    json.dump(chunks, f, ensure_ascii=False)
